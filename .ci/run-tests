@@ -29,9 +29,17 @@ fi
 
 echo -e "\033[1m>>>>> Unreleased is $IS_UNRELEASED >>>>>>>>>>>>>>>>>>>>>>>>>>>>>\033[0m"
 script_path=$(dirname "$(realpath "$0")")
+
+# ✅ Define all required variables early to avoid unbound errors
 export opensearch_node_name="opensearch-node"
 export network_name="opensearch-network"
+export CLEANUP=true
+export DETACH=false
+export external_opensearch_url="http://localhost:9200"
+export STACK_VERSION="${OPENSEARCH_VERSION}"
+
 source "$script_path/functions/imports.sh"
+
 
 
 
