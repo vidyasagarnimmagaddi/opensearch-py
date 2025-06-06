@@ -10,10 +10,17 @@ export CLUSTER="${CLUSTER:-opensearch}"
 export SECURE_INTEGRATION="${1:-false}"
 export OPENSEARCH_VERSION="${2:-latest}"
 export TEST_PATTERN="${3:-}"
+
 if [[ "$SECURE_INTEGRATION" == "true" ]]; then
     export OPENSEARCH_URL_EXTENSION="https"
+    export OPENSEARCH_URL="https://admin:${OPENSEARCH_INITIAL_ADMIN_PASSWORD:-myStrongPassword123!}@localhost:9200"
+    HEALTH_URL="https://localhost:9200/_cluster/health"
+    CURL_EXTRA="-u admin:${OPENSEARCH_INITIAL_ADMIN_PASSWORD:-myStrongPassword123!} -k"
 else
     export OPENSEARCH_URL_EXTENSION="http"
+    export OPENSEARCH_URL="http://localhost:9200"
+    HEALTH_URL="http://localhost:9200/_cluster/health"
+    CURL_EXTRA=""
 fi
 
 export IS_UNRELEASED=false
@@ -28,6 +35,24 @@ set -euo pipefail
 
 echo -e "\033[1m>>>>> Start server container >>>>>>>>>>>>>>>>>>>>>>>>>>>>>\033[0m"
 DETACH=true bash .ci/run-opensearch.sh
+
+# Wait for OpenSearch to be up (max 90s)
+echo -e "\033[1m>>>>> Waiting for OpenSearch cluster to be healthy... >>>>>>>>>>>>>>>>>>>>>>>>>>>>>\033[0m"
+for i in {1..18}; do
+    if curl --silent --fail $CURL_EXTRA "$HEALTH_URL" > /dev/null; then
+        echo "OpenSearch is up!"
+        break
+    else
+        echo "Waiting for OpenSearch ($HEALTH_URL)..."
+        sleep 5
+    fi
+    if [ $i -eq 18 ]; then
+        echo "OpenSearch did not become healthy in time. Printing container logs:"
+        docker ps -a
+        docker logs opensearch || true
+        exit 1
+    fi
+done
 
 if [[ -n "$RUNSCRIPTS" ]]; then
   for RUNSCRIPT in ${RUNSCRIPTS//,/ } ; do
