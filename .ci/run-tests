@@ -36,9 +36,9 @@ set -euo pipefail
 echo -e "\033[1m>>>>> Start server container >>>>>>>>>>>>>>>>>>>>>>>>>>>>>\033[0m"
 DETACH=true bash .ci/run-opensearch.sh
 
-# Wait for OpenSearch to be up (max 90s)
+# Wait for OpenSearch to be up (max 180s)
 echo -e "\033[1m>>>>> Waiting for OpenSearch cluster to be healthy... >>>>>>>>>>>>>>>>>>>>>>>>>>>>>\033[0m"
-for i in {1..18}; do
+for i in {1..36}; do
     if curl --silent --fail $CURL_EXTRA "$HEALTH_URL" > /dev/null; then
         echo "OpenSearch is up!"
         break
@@ -46,9 +46,9 @@ for i in {1..18}; do
         echo "Waiting for OpenSearch ($HEALTH_URL)..."
         sleep 5
     fi
-    if [ $i -eq 18 ]; then
+    if [ $i -eq 36 ]; then
         echo "OpenSearch did not become healthy in time. Printing container logs:"
-        docker ps -a
+        docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' opensearch
         docker logs opensearch || true
         exit 1
     fi
